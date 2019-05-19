@@ -6,12 +6,14 @@
 # @Version : $Id$
 
 import os
+from ucsctracks import find_ucsctrack, find_trackhub, chunk_image
 
 # Integration Attributes: Chrom ChrStart ChrEnd HotLevel VectorStart VectorEnd LTR	InsertOri	InsertGene	GeneOri	 ExonIntron	TE TEFamily  TEClass NearestGene	NearestGeneID	NearestGeneDist	 CellNumber  CellBarcodes
 class IntegrationSite(object):
 	"""docstring for integration"""
 	def __init__(
 			self,
+			Genome=None,
 			Chrom=None,
 			ChrStart=None,
 			ChrEnd=None,
@@ -23,7 +25,8 @@ class IntegrationSite(object):
 			InsertGene=None,
 			GeneOri=None,
 			ExonIntron=None,
-			TE=None,
+			Enhancer=None,
+			Elite=None,
 			TEFamily=None,
 			TEClass=None,
 			NearestGene=None,
@@ -34,7 +37,8 @@ class IntegrationSite(object):
 			ReadNumber=None
 	):
 		super(Integration, self).__init__()
-		self.chrom = Chrom,
+		self.Genome = Genome,
+		self.Chrom = Chrom,
 		self.ChrStart=ChrStart,
 		self.ChrEnd=ChrEnd,
 		self.VectorStart=VectorStart,
@@ -44,7 +48,8 @@ class IntegrationSite(object):
 		self.InsertGene=InsertGene,
 		self.GeneOri=GeneOri,
 		self.ExonIntron=ExonIntron,
-		self.TE=TE,
+		self.Enhancer=Enhancer,
+		self.Elite=Elite,
 		self.TEFamily=TEFamily,
 		self.TEClass=TEClass,
 		self.NearestGene=NearestGene,
@@ -52,31 +57,47 @@ class IntegrationSite(object):
 		self.CellNumber=CellNumber,
 		self.CellBarcodes=CellBarcodes
 
-	def get_reads_num(self):
+	def annotate_TE(self, tefile):
+		results = find_ucsctrack(self.Genome, self.Chrom, self.ChrStart, self.ChrEnd, 'rmsk', ['repClass', 'repFamily'])
+		repClass, repFamily = results[0]
+		self.TEFamily = repFamily
+		self.TEClass = repClass
+		return self
+
+	def annotate_Gene(self):
+		results = find_ucsctrack(self.Genome, self.Chrom, self.ChrStart, self.ChrEnd, 'knownGene', [5, 17])
+		GeneOri, GeneSymble = results[0][0]
+		self.InsertGene = GeneSymble
+		self.GeneOri = GeneOri
+		return self
+
+	def annotate_Enhancer():
+		results = find_ucsctrack(self.Genome, self.Chrom, self.ChrStart, self.ChrEnd, 'geneHancerRegElements', ['elementType', 'eliteness'])
+		elementType, eliteness = results[0]
+		self.Enhancer = elementType
+		self.Elite = eliteness
+		return self
+
+	def annotate_UCSC_track(self, track):
 		pass
 
-	def get_cell_barcodes(self):
+	def nearest_gene(self):
 		pass
 
-	def get_metrics(self):
-		pass
+	def visualize_UCSC_track(self, imgdir):
+		img_start = str(self.ChrStart - 10000)
+		img_end = str(self.ChrEnd + 10000)
+		position = "{Chrom}:{start}-{end}".format(Chrom=self.Chrom, start=img_start, end=img_end)
+		params = {'db':self.Genome, 'position':position}
+		chunk_image(params, imgdir=imgdir)
 
-	def _annotate_TE(self, tefile):
-		for line in TE_fh.readlines():
-			chrname, chrst, chred, chrleft, strand, TEname, TEClass, TEfamily = line.rstrip().split()[5:13]
-			chrst = int(chrst)
-			chred = int(chred)
-			if chrname in chr_block:
-				for block in chr_block[chrname]:
-					if (block[0] >= chrst and block[0] <= chred) or (block[1] >= chrst and block[1] <= chred):
-						line2TE[block[2]] = ",".join([TEname, TEfamily, TEClass])
+	def is_known(self):
+		
 
-	def _annotate_Gene(self):
-		pass
+	def tostring(self):
 
-	def _is_known(self):
-		pass
 
+		
 class HotSpot(object):
 	"""docstring for HotSpot"""
 	def __init__(self, arg):

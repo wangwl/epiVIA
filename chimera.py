@@ -12,6 +12,7 @@ from Bio.Seq import Seq
 from Bio import SeqIO, SeqRecord
 from collections import defaultdict, Counter
 from multiprocessing import Manager, Pool, Process
+from subprocess import Popen, PIPE
 
 from integration import IntegrationSite, HotSpot
 #from report import Statistics, ChimeraSummary, VectorSummary
@@ -26,7 +27,7 @@ parser.add_argument("--HostIndex", help="The Index prefix of Host genome")
 parser.add_argument("--KnownSites", help="The known integration sites from previous studies, in the format of RID database")
 parser.add_argument("--LTRClipLen", default=11, type = int, help="The soft clipped read length to search in LTR")
 parser.add_argument("--HostClipLen", default=17, type = int, help="The soft clipped length to search in host genome")
-parser.add_argument("--HostSeq", help="The Host fasta sequence")
+parser.add_argument("--Host2bit", help="The 2bit (UCSC) file of host genome sequence")
 parser.add_argument("--LTRseq", help="A fasta file containing the sequence of LTR after integration")
 parser.add_argument("--tempdir", help="A directory for temporary files generated in the pipeline")
 
@@ -79,8 +80,13 @@ class ChimericRead(ChimericFragment):
 	def __init__(self, read, integration):
 		super(ChimericRead, self).__init__()
 		# self.read = read
-		self.reference_name = mate_map_to
+		self.reference_name = [read.reference_name, read.reference_name]
+		self.reference_start = [read.reference_start, read.next_reference_start]
+		self.reference_end = [read.reference_end, read.next_reference_start + read.qlen]
+		self.fragment_seq = [read.seq]
 		self.integration = integration
+		self.readname = read.qname
+		self.barcode = readname.qname.split(":")[0]
 
 class VectorFragment(object):
 	"""docstring for VectorFragment"""
@@ -124,15 +130,13 @@ def ClipInTarget(read, clipcutoff, target):
 	barcode = qname.split(":")[0]
 	cigar = read.cigar
 
-	if args.LTRClipLen:
-		clipcutoff=args.LTRClipLen
 	## Only clipped on one end of the read is allowed
 	clipped_frag = GetClipFrag(read, clipcutoff)
 	clipped_len = len(clipped_frag)
 	if clipped_len < clipcutoff:
 		return
 
-	target_seq_str = str(target.seq)
+	target_seq_str = str(target)
 	target_revcseq_str = str(target.reverse_complement().seq)
 	target_seq_len = len(target_seq_str)
 
@@ -146,9 +150,9 @@ def ClipInTarget(read, clipcutoff, target):
 	elif len(minus_hits) == 1 and len(plus_hits) == 0:
 		return hits, "-"
 	else:
-		raise Exception
+		return
 
-def FindChimericPair(unpaired_reads, chimera_fragments, id2seq):
+def FindChimericPair(unpaired_reads, chimera_fragments):
 	for readname in unpaired_reads:
 		barcode = readname.split(":")[0]
 		read1, read2 = unpaired_reads[readname]
@@ -161,9 +165,10 @@ def FindChimericPair(unpaired_reads, chimera_fragments, id2seq):
 			HostRead = read1
 		else:
 			raise Exception
-		host_alts = dict(HostRead.tags)
-		if 'XA' in host_alts:
+		host_tags = dict(HostRead.tags)
+		if 'XA' in host_tags:
 			continue
+		
 		InsertOri = "+" if HostRead.is_reverse != VectorRead.is_reverse else "-"
 		Chrom=HostRead.reference_name
 		ChrStart=HostRead.reference_start + 1
@@ -171,21 +176,70 @@ def FindChimericPair(unpaired_reads, chimera_fragments, id2seq):
 		VectorStart=VectorRead.reference_start + 1
 		VectorEnd=VectorRead.reference_end
 
+		## if one of the Read is clipped and the clipped fragment can be found in LTR or local sequence within 200 bp of the host read aligned to, we can identify the exact integration loci.
 		ltr_seq = vector_seq[:ltr_len]
-		hits, strand = ClipInTarget(HostRead, args.LTRClipLen, ltr_seq)
+		ltr_hits, ltr_strand = ClipInTarget(HostRead, args.LTRClipLen, ltr_seq)
 
-		if len(hits) == 1 and InsertOri == strand:
-			if hits[0] <= 2:
+		# Retrieve the local sequence upper or downstream of Host Read aligned position.
+		if InsertOri == "+" and VectorRead.cigar[0][0]==4 and VectorRead.cigar[0][1] >= args.LTRClipLen:
+			local_seq_st = HostRead.reference_end
+			local_seq_ed = local_seq_st + 200
+			host_local_ltr = "LTR5"
+		elif InsertOri == "+" and VectorRead.cigar[-1][0] == 4 and VectorRead.cigar[-1][1] >= args.LTRClipLen:
+			local_seq_st = HostRead.reference_start - 200
+			local_seq_ed = local_seq_st + 200
+			host_local_ltr = "LTR3"
+		elif InsertOri == "-" and VectorRead.cigar[0][0]==4 and VectorRead.cigar[0][1] >= args.LTRClipLen:
+			local_seq_st = HostRead.reference_start - 200
+			local_seq_ed = local_seq_st + 200
+			host_local_ltr = "LTR5"
+		elif InsertOri == "-" and VectorRead.cigar[-1][0]==4 and VectorRead.cigar[-1][1] >= args.LTRClipLen:
+			local_seq_st = HostRead.reference_end
+			local_seq_ed = local_seq_st + 200
+			host_local_ltr = "LTR3"
+
+		if local_seq_st and local_seq_ed:
+			twoBitToFa_P = Popen("twoBitToFa -seq={chr} -start={start} -end={end} {2bit} stdout".format(chr=Chrom, start=local_seq_st, end=local_seq_ed, 2bit=args.Host2bit), shell=True, stdout=PIPE)
+			if twoBitToFa_P.poll() != 0:
+				raise Exception
+			host_local_seq = SeqIO.parse(twoBitToFa_P.stdout, 'fasta').next().seq
+			host_local_hits, host_local_strand = ClipInTarget(VectorRead, args.LTRClipLen, host_local_seq)
+		else:
+			host_local_hits = []
+			host_local_strand = ""
+
+		LTR=None
+		if len(ltr_hits) == 1 and ltr_strand == InsertOri and len(host_local_hits) == 0:
+			if ltr_hits[0] <= 2:
 				LTR = "LTR5"
 				ChrStart = HostRead.reference_end
 				VectorStart = 1
 				VectorEnd = 1
-			elif hits[0] >= three_prime_pos-2:
+			elif ltr_hits[0] >= three_prime_pos-2:
 				LTR = "LTR3"
 				ChrEnd = read.reference_start + 1
 				VectorStart = vector_len
 				VectorEnd = vector_len
-		integration = Integration(Chrom=Chrom, ChrStart=ChrStart, ChrEnd=ChrEnd, VectorStart=VectorStart, VectorEnd=VectorEnd, LTR=LTR, InsertOri=InsertOri, CellNumber=1, CellBarcodes=[barcode], ReadInCell=[1], ReadNumber=1)
+		elif len(host_local_hits) == 1 and host_local_strand == InsertOri and len(ltr_hits) == 0:
+			if host_local_strand == "+":
+				ChrStart = local_seq_st + host_local_hits[0] + 1
+				ChrEnd = ChrStart
+			else:
+				ChrStart = 200 - host_local_hits[0] + local_seq_st
+				ChrEnd = ChrStart
+			if VectorRead.reference_start == 0:
+				VectorStart = 1
+				VectorEnd = 1
+				LTR = "LTR5"
+			elif VectorRead.reference_end == vector_len:
+				VectorStart = vector_len
+				VectorEnd = vector_len
+				LTR="LTR3"
+			else:
+				ChrStart = HostRead.reference_start + 1
+				ChrEnd = HostRead.reference_end
+
+		integration = Integration(Chrom=Chrom, ChrStart=ChrStart, ChrEnd=ChrEnd, VectorStart=VectorStart, VectorEnd=VectorEnd, LTR=LTR, InsertOri=InsertOri)
 		chimera = ChimericPair(HostRead=HostRead, VectorRead=VectorRead, integration=integration)
 		chimera_fragments.append(chimera)
 
@@ -218,7 +272,7 @@ def FindHostClip(read, clipcutoff, chimera_fragments):
 	ChrEnd = ChrStart
 	VectorEnd = VectorStart
 	ChrEnd = ChrStart
-	integration = Integration(Chrom=read.reference_name, ChrStart=ChrStart, ChrEnd=ChrEnd, VectorStart=VectorStart, VectorEnd=VectorEnd, LTR=LTR, InsertOri=InsertOri, CellNumber=1, CellBarcodes=[barcode], ReadInCell=[1], ReadNumber=1)
+	integration = Integration(Chrom=read.reference_name, ChrStart=ChrStart, ChrEnd=ChrEnd, VectorStart=VectorStart, VectorEnd=VectorEnd, LTR=LTR, InsertOri=InsertOri)
 
 	if integration:
 		chimera = ChimericRead(read=read, integration=integration)
@@ -318,18 +372,12 @@ def ParseBam(bamfile, unpaired_reads, chimera_fragments, vector_reads, id2seq):
 	align = pysam.AlignmentFile(bamfile, 'rb')
 	for read in align:
 		readname = read.qname
-		## filter properly paired and unmapped or SE mapped reads
 		if read.flag & 2 and read.reference_name != vector_name:
 			FindHostClip(read, chimera_fragments, id2seq)
 		elif read.reference_name == vector_name and (read.next_reference_name == vector_name or read.mate_is_unmapped):
 			vector_reads[readname].append(read)
 		elif not read.flag & 14 and (read.reference_name == vector_name or read.next_reference_name == vector_name):
 			unpaired_reads[readname].append(read)
-	
-def ParseFasta(fastafile, id2seq):
-	faiter = SeqIO.parse(fastafile, 'fasta')
-	for fa in faiter:
-		id2seq[fa.name] = fa.seq
 
 def main(bamfile, vector):
 	chimera_fragments = []
@@ -337,10 +385,7 @@ def main(bamfile, vector):
 	vector_reads = defalutdict(list)
 	unpaired_reads = defalutdict(list)
 
-	id2seq = dict()
-	ParseFasta(args.reference, id2seq)
 	ParseBam(bamfile, unpaired_reads, chimera_fragments, vector_reads)
-	id2seq.clear()
 	FindChimericPair(unpaired_reads, chimera_fragments)
 	fapath = os.path.join(args.tempdir, "Clipped_fragment.fa")
 	fa_fh = open(fapath, 'w')
@@ -350,7 +395,7 @@ def main(bamfile, vector):
 	
 	cellstatfile = os.path.join(args.outdir, "Chimeric_cells.list")
 	integrationfile = os.path.join(args.outdir, "Integration_sites.list")
-	GenerateOutput(chimera_fragments, cellstatfile, integrationfile)
+	ChimeraSummary(chimera_fragments, cellstatfile, integrationfile)
 
 if __name__ == '__main__':
 	main()
