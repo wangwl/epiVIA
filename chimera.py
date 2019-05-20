@@ -128,15 +128,15 @@ def getAltanatives(tags):
 	return alt_aligns
 
 # @pysnooper.snoop()
-def GetClipFrag(read, clipcutoff=11):
+def GetClipFrag(read, clipcutoff):
 	cigar = read.cigar
 	clipped_frag = ''
-	if len(cigar) == 1:
+	if len(cigar) <= 1:
 		return clipped_frag
-	if cigar[0][0] == 4 and cigar[0][1] >= 11:
+	if cigar[0][0] == 4 and cigar[0][1] >= clipcutoff:
 		clipped_len = cigar[0][1]
 		clipped_frag = read.seq[0:cigar[0][1]]
-	elif cigar[-1][0] == 4 and cigar[-1][1] >= 11:
+	elif cigar[-1][0] == 4 and cigar[-1][1] >= clipcutoff:
 		clipped_len = cigar[-1][1]
 		right_clip = cigar[-1][1] * -1
 		clipped_frag = read.seq[right_clip:]
