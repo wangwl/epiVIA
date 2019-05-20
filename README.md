@@ -1,4 +1,4 @@
 # epiVIA
-Identify vector integration site with single-cell epigenomic assays
+Vector Integration site Analysis with epigenomic assays.
 
-Tips to Xingzhao, the main function is in chimera.py
+Tips to Collaborators, the main function is in chimera.py
