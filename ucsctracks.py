@@ -27,7 +27,11 @@ class UCSCTrack(object):
 
 # @pysnooper.snoop()
 def run_bigBedToBed(genome, chrom, start, end, track, columns=None, gbdb="http://hgdownload.soe.ucsc.edu/gbdb/"):
-	file_path = "{gbdb}/{genome}/{bb_path}".format(gbdb=gbdb, genome=genome, bb_path=bb_conf[track])
+	try:
+		file_path = "{gbdb}/{genome}/{bb_path}".format(gbdb=gbdb, genome=genome, bb_path=bb_conf[track])
+	except:
+		print "Provide {} bigBed file path".format(track)
+	
 	cmd = "bigBedToBed -chrom={chrom} -start={start} -end={end} {path} stdout".format(chrom=chrom, start=start, end=end, path=file_path)
 	child = Popen(cmd, shell=True, stdout=PIPE)
 	child.wait()
@@ -46,7 +50,7 @@ def run_bigBedToBed(genome, chrom, start, end, track, columns=None, gbdb="http:/
 		output.append(record)
 	return output
 
-# @pysnooper.snoop()
+#@pysnooper.snoop()
 def find_ucsctrack(genome, chrom, start, end, track, keys=None):
 	action = "getData"
 	datatype = "track"
@@ -55,9 +59,10 @@ def find_ucsctrack(genome, chrom, start, end, track, keys=None):
 	url = UCSC_API + "{action}/{datatype}?genome={genome};track={track};chrom={chrom};start={start};end={end}".format(action = action, datatype=datatype, genome=genome, chrom=chrom, start=start, end=end, track=track_name)
 	request = requests.get(url)
 
-	if request.headers['Content-Type'] == 'application/json':
+	if request.status_code != 200:
+		print url
+	if request.status_code == 200 and request.headers['Content-Type'] == 'application/json':
 		content = yaml.safe_load(request.text)
-		print content
 		items = content[track_name]
 		output = []
 		for record in items:
@@ -71,7 +76,7 @@ def find_ucsctrack(genome, chrom, start, end, track, keys=None):
 			output.append(line)
 		return output
 	else:
-		items = run_bigBedToBed(chrom, start, end, genome, track, keys)
+		items = run_bigBedToBed(genome, chrom, start, end, track, keys)
 		return items
 
 def find_trackhub():
