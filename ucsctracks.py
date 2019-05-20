@@ -17,33 +17,17 @@ from subprocess import Popen, PIPE
 
 from utils import bb_conf
 
-parser = argparse.ArgumentParser(description='annotate chimeric region with TE and gene features')
-parser.add_argument("--bedfile")
-parser.add_argument("track", help="a bedfile with the chimeric region")
-parser.add_argument("--track_keys", nargs="+")
-parser.add_argument("--bedcolumns", nargs="+", type=int)
-parser.add_argument("--sequence")
-parser.add_argument("--hubUrl")
-parser.add_argument("--genome")
-parser.add_argument("--chrom")
-parser.add_argument("--start")
-parser.add_argument("--end")
-parser.add_argument("--imgdir")
-parser.add_argument("--gbdb", default="http://hgdownload.soe.ucsc.edu/gbdb/")
-args = parser.parse_args()
-
 UCSC_API = "https://api.genome.ucsc.edu/"
-gbdb = args.gbdb
 
 class UCSCTrack(object):
 	"""docstring for UCSCTrack"""
-	def __init__(self**kwargs):
+	def __init__(self, **kwargs):
 		super(UCSCTrack, self).__init__()
 
 
 # @pysnooper.snoop()
-def run_bigBedToBed(genome, chrom, start, end, track, columns=None):
-	file_path = "{gbdb}/{genome}/{bb_path}".format(gbdb=args.gbdb, genome=genome, bb_path=bb_conf[track])
+def run_bigBedToBed(genome, chrom, start, end, track, columns=None, gbdb="http://hgdownload.soe.ucsc.edu/gbdb/"):
+	file_path = "{gbdb}/{genome}/{bb_path}".format(gbdb=gbdb, genome=genome, bb_path=bb_conf[track])
 	cmd = "bigBedToBed -chrom={chrom} -start={start} -end={end} {path} stdout".format(chrom=chrom, start=start, end=end, path=file_path)
 	child = Popen(cmd, shell=True, stdout=PIPE)
 	child.wait()
@@ -90,18 +74,35 @@ def find_ucsctrack(genome, chrom, start, end, track, keys=None):
 		items = run_bigBedToBed(chrom, start, end, genome, track, keys)
 		return items
 
-def chunk_image(**kwargs, imgdir):
+def find_trackhub():
+	pass
+
+def chunk_image(imgdir, **kwargs):
 	IMAGE_API = "http://genome.ucsc.edu/cgi-bin/hgRenderTracks?"
 	request = requests.get(IMAGE_API, params=kwargs)
 	if request.status_code != 200:
 		raise Exception
 
-	image_file = os.path.join(imgdir=args.imgdir, kwargs['position']+".png")
+	image_file = os.path.join(imgdir, kwargs['position']+".png")
 	image_fh = open(image_file, 'w')
 	image_fh.write(request.content)
 	image_fh.close()
 
 def main():
+	parser = argparse.ArgumentParser(description='annotate chimeric region with TE and gene features')
+	parser.add_argument("--bedfile", help="a bedfile with the chimeric region")
+	parser.add_argument("track")
+	parser.add_argument("--track_keys", nargs="+")
+	parser.add_argument("--bedcolumns", nargs="+", type=int)
+	parser.add_argument("--sequence")
+	parser.add_argument("--hubUrl")
+	parser.add_argument("--genome")
+	parser.add_argument("--chrom")
+	parser.add_argument("--start")
+	parser.add_argument("--end")
+	parser.add_argument("--imgdir")
+	parser.add_argument("--gbdb", default="http://hgdownload.soe.ucsc.edu/gbdb/")
+	args = parser.parse_args()
 	if args.track_keys:
 		items = find_ucsctrack(args.genome, args.chrom, args.start, args.end, args.track, args.track_keys)
 	else:

@@ -13,9 +13,10 @@ from Bio import SeqIO, SeqRecord
 from collections import defaultdict, Counter
 from multiprocessing import Manager, Pool, Process
 from subprocess import Popen, PIPE
+import pysnooper
 
-from integration import IntegrationSite, HotSpot
-#from report import Statistics, ChimeraSummary, VectorSummary
+from integration import Integration, HotSpot
+from report import Statistics, ChimeraSummary, VectorSummary
 
 parser = argparse.ArgumentParser(description="Find chimera in alignment result with combined host and vector sequence as reference")
 parser.add_argument("bamfile")
@@ -30,6 +31,7 @@ parser.add_argument("--HostClipLen", default=17, type = int, help="The soft clip
 parser.add_argument("--Host2bit", help="The 2bit (UCSC) file of host genome sequence")
 parser.add_argument("--LTRseq", help="A fasta file containing the sequence of LTR after integration")
 parser.add_argument("--tempdir", help="A directory for temporary files generated in the pipeline")
+parser.add_argument("--genome", default='hg38', help="genome name in UCSC")
 
 args = parser.parse_args()
 
@@ -46,6 +48,9 @@ try:
 	vector_len = len(vector.seq)
 except OSError:
 	print "Faile to parse the vector fasta file", args.ProvirousSeq
+
+if not args.LTRLength and not args.LTRseq:
+	raise Exception
 # ChimericPair Attibutes:  Chr ChrStart ChrEnd VectorStart VectorEnd CellBarcode ReadID ClipHost ClipVector ClipedSeq  ClipMatched Read1 Read2
 
 class ChimericFragment(object):
@@ -60,10 +65,11 @@ class ChimericFragment(object):
 		self.fragment_seq = []
 		self.name = None
 		self.barcode = None
+		self.chimeric_type = None
 
 class ChimericPair(ChimericFragment):
 	"""docstring for ChimericPair"""
-	def __init__(self, HostRead, VectorRead, integration):
+	def __init__(self, HostRead, VectorRead, integration=None):
 		super(ChimericPair, self).__init__()
 		# self.HostRead = HostRead
 		# self.VectorRead = VectorRead
@@ -74,10 +80,11 @@ class ChimericPair(ChimericFragment):
 		self.fragment_seq = [HostRead.seq, VectorRead.seq]
 		self.readname = HostRead.qname
 		self.barcode = HostRead.qname.split(":")[0]
+		self.chimeric_type = "Pair"
 		
 class ChimericRead(ChimericFragment):
 	"""docstring for ChimericRead"""
-	def __init__(self, read, integration):
+	def __init__(self, read, integration=None):
 		super(ChimericRead, self).__init__()
 		# self.read = read
 		self.reference_name = [read.reference_name, read.reference_name]
@@ -87,6 +94,10 @@ class ChimericRead(ChimericFragment):
 		self.integration = integration
 		self.readname = read.qname
 		self.barcode = readname.qname.split(":")[0]
+		if read.reference_name == vector_name:
+			self.chimeric_type = "VectorRead"
+		else:
+			self.chimeric_type = "HostRead"
 
 class VectorFragment(object):
 	"""docstring for VectorFragment"""
@@ -134,7 +145,7 @@ def ClipInTarget(read, clipcutoff, target):
 	clipped_frag = GetClipFrag(read, clipcutoff)
 	clipped_len = len(clipped_frag)
 	if clipped_len < clipcutoff:
-		return
+		return ([], "")
 
 	target_seq_str = str(target)
 	target_revcseq_str = str(target.reverse_complement().seq)
@@ -146,11 +157,11 @@ def ClipInTarget(read, clipcutoff, target):
 
 	three_prime_pos = target_seq_len - clipped_len
 	if len(plus_hits) == 1 and len(minus_hits) == 0:
-		return hits, "+"
+		return (hits, "+")
 	elif len(minus_hits) == 1 and len(plus_hits) == 0:
-		return hits, "-"
+		return (hits, "-")
 	else:
-		return
+		return ([], "")
 
 def FindChimericPair(unpaired_reads, chimera_fragments):
 	for readname in unpaired_reads:
@@ -199,7 +210,7 @@ def FindChimericPair(unpaired_reads, chimera_fragments):
 			host_local_ltr = "LTR3"
 
 		if local_seq_st and local_seq_ed:
-			twoBitToFa_P = Popen("twoBitToFa -seq={chr} -start={start} -end={end} {2bit} stdout".format(chr=Chrom, start=local_seq_st, end=local_seq_ed, 2bit=args.Host2bit), shell=True, stdout=PIPE)
+			twoBitToFa_P = Popen("twoBitToFa -seq={chr} -start={start} -end={end} {TwoBit} stdout".format(chr=Chrom, start=local_seq_st, end=local_seq_ed, TwoBit=args.Host2bit), shell=True, stdout=PIPE)
 			if twoBitToFa_P.poll() != 0:
 				raise Exception
 			host_local_seq = SeqIO.parse(twoBitToFa_P.stdout, 'fasta').next().seq
@@ -243,7 +254,8 @@ def FindChimericPair(unpaired_reads, chimera_fragments):
 		chimera = ChimericPair(HostRead=HostRead, VectorRead=VectorRead, integration=integration)
 		chimera_fragments.append(chimera)
 
-def FindHostClip(read, clipcutoff, chimera_fragments):
+# @pysnooper.snoop()
+def FindHostClip(read, chimera_fragments, clipcutoff=args.LTRClipLen):
 	ltr_seq = vector_seq[:ltr_len]
 	hits, strand = ClipInTarget(read, clipcutoff, ltr_seq)
 	if len(hits) != 1:
@@ -277,6 +289,7 @@ def FindHostClip(read, clipcutoff, chimera_fragments):
 	if integration:
 		chimera = ChimericRead(read=read, integration=integration)
 		chimera_fragments.append(chimera)
+	return
 
 def ReAlignment(fafile, index, chimera_fragments, vector_reads):
 	import subprocess
@@ -367,25 +380,27 @@ def CorrectVectorAlignment(vector_reads, fa_fh, vector_fragments, clipcutoff):
 			read1, read2 = read2, read1
 		vector_pair = VectorFragment(first=read1, second=read2)
 		vector_fragments.append(vector_pair)
+	return
 
-def ParseBam(bamfile, unpaired_reads, chimera_fragments, vector_reads, id2seq):
+def ParseBam(bamfile, unpaired_reads, chimera_fragments, vector_reads):
 	align = pysam.AlignmentFile(bamfile, 'rb')
 	for read in align:
 		readname = read.qname
 		if read.flag & 2 and read.reference_name != vector_name:
-			FindHostClip(read, chimera_fragments, id2seq)
+			FindHostClip(read, args.LTRClipLen, chimera_fragments)
 		elif read.reference_name == vector_name and (read.next_reference_name == vector_name or read.mate_is_unmapped):
 			vector_reads[readname].append(read)
 		elif not read.flag & 14 and (read.reference_name == vector_name or read.next_reference_name == vector_name):
 			unpaired_reads[readname].append(read)
+	return
 
-def main(bamfile, vector):
+def main():
 	chimera_fragments = []
 	vector_fragments = []
-	vector_reads = defalutdict(list)
-	unpaired_reads = defalutdict(list)
+	vector_reads = defaultdict(list)
+	unpaired_reads = defaultdict(list)
 
-	ParseBam(bamfile, unpaired_reads, chimera_fragments, vector_reads)
+	ParseBam(args.bamfile, unpaired_reads, chimera_fragments, vector_reads)
 	FindChimericPair(unpaired_reads, chimera_fragments)
 	fapath = os.path.join(args.tempdir, "Clipped_fragment.fa")
 	fa_fh = open(fapath, 'w')
@@ -395,7 +410,9 @@ def main(bamfile, vector):
 	
 	cellstatfile = os.path.join(args.outdir, "Chimeric_cells.list")
 	integrationfile = os.path.join(args.outdir, "Integration_sites.list")
-	ChimeraSummary(chimera_fragments, cellstatfile, integrationfile)
+	ChimeraSummary(chimera_fragments, integrationfile)
+	#VectorSummary(vector_fragments)
+	#report()
 
 if __name__ == '__main__':
 	main()

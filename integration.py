@@ -9,7 +9,7 @@ import os
 from ucsctracks import find_ucsctrack, find_trackhub, chunk_image
 
 # Integration Attributes: Chrom ChrStart ChrEnd HotLevel VectorStart VectorEnd LTR	InsertOri	InsertGene	GeneOri	 ExonIntron	TE TEFamily  TEClass NearestGene	NearestGeneID	NearestGeneDist	 CellNumber  CellBarcodes
-class IntegrationSite(object):
+class Integration(object):
 	"""docstring for integration"""
 	def __init__(
 			self,
@@ -31,9 +31,9 @@ class IntegrationSite(object):
 			TEClass=None,
 			NearestGene=None,
 			NearestGeneDist=None,
-			CellNumber=None,
 			CellBarcodes=None,
 			ReadInCell=None,
+			CellNumber=None,
 			ReadNumber=None
 	):
 		super(Integration, self).__init__()
@@ -57,7 +57,7 @@ class IntegrationSite(object):
 		self.CellNumber=CellNumber,
 		self.CellBarcodes=CellBarcodes
 
-	def annotate_TE(self, tefile):
+	def annotate_TE(self):
 		results = find_ucsctrack(self.Genome, self.Chrom, self.ChrStart, self.ChrEnd, 'rmsk', ['repClass', 'repFamily'])
 		repClass, repFamily = results[0]
 		self.TEFamily = repFamily
@@ -65,13 +65,23 @@ class IntegrationSite(object):
 		return self
 
 	def annotate_Gene(self):
-		results = find_ucsctrack(self.Genome, self.Chrom, self.ChrStart, self.ChrEnd, 'knownGene', [5, 17])
-		GeneOri, GeneSymble = results[0][0]
+		results = find_ucsctrack(self.Genome, self.Chrom, self.ChrStart, self.ChrEnd, 'knownGene', [1, 2, 5, 10, 11, 17])
+		GeneSt, GeneEd, GeneOri, ExonLen, ExonSt, GeneSymble = results[0]
+		Exon_Lengths = [str(x) for x in ExonLen.rstrip(",").split(",")]
+		Exon_Starts = [GeneSt + str(ExonSt.rstrip(",").split(",")[x]) for x in xrange(0,len(Exon_Lengths))]
+		Exon_Ends = [GeneSt + Exon_Starts[x] + Exon_Lengths[x] for x in xrange(0,len(Exon_Lengths))]
+		for x in xrange(0, len(Exon_Starts)):
+			if self.ChrStart > Exon_Starts[x] and self.ChrEnd <= Exon_Ends[x]:
+				ExonIntron = "exon"
+			elif x +1 < len(Exon_Starts) and self.ChrStart > Exon_Ends[x] and self.ChrStart <= Exon_Starts[x+1]:
+				ExonIntron = "intron"
+
+		self.ExonIntron = ExonIntron
 		self.InsertGene = GeneSymble
 		self.GeneOri = GeneOri
 		return self
 
-	def annotate_Enhancer():
+	def annotate_Enhancer(self):
 		results = find_ucsctrack(self.Genome, self.Chrom, self.ChrStart, self.ChrEnd, 'geneHancerRegElements', ['elementType', 'eliteness'])
 		elementType, eliteness = results[0]
 		self.Enhancer = elementType
@@ -92,9 +102,13 @@ class IntegrationSite(object):
 		chunk_image(params, imgdir=imgdir)
 
 	def is_known(self):
-		
+		pass
 
 	def tostring(self):
+		try:
+			basic_string = "\t".join([self.Genome, self.Chrom, str(self.ChrStart), str(self.ChrEnd), str(self.VectorStart), str(self.VectorEnd), self.LTR, self.InsertOri])
+		except Exception as e:
+			raise e
 
 
 		
