@@ -81,14 +81,19 @@ class Integration(object):
 		results = find_ucsctrack(self.Genome, self.Chrom, self.ChrStart, ChrEnd, 'knownGene', [1, 2, 5, 10, 11, 17])
 		if len(results) > 0:
 			GeneSt, GeneEd, GeneOri, ExonLen, ExonSt, GeneSymble = results[0]
-			Exon_Lengths = [str(x) for x in ExonLen.rstrip(",").split(",")]
-			Exon_Starts = [GeneSt + str(ExonSt.rstrip(",").split(",")[x]) for x in xrange(0,len(Exon_Lengths))]
-			Exon_Ends = [GeneSt + Exon_Starts[x] + Exon_Lengths[x] for x in xrange(0,len(Exon_Lengths))]
+			GeneSt = int(GeneSt)
+			Exon_Lengths = [int(x) for x in ExonLen.rstrip(",").split(",")]
+			Exon_Starts = [GeneSt + int(ExonSt.rstrip(",").split(",")[x]) for x in xrange(0,len(Exon_Lengths))]
+			Exon_Ends = [Exon_Starts[x] + Exon_Lengths[x] for x in xrange(0,len(Exon_Lengths))]
+
 			for x in xrange(0, len(Exon_Starts)):
-				if self.ChrStart > Exon_Starts[x] and self.ChrEnd <= Exon_Ends[x]:
+				if self.ChrStart >= Exon_Starts[x] and self.ChrStart <= Exon_Ends[x]:
 					ExonIntron = "exon"
-				elif x +1 < len(Exon_Starts) and self.ChrStart > Exon_Ends[x] and self.ChrStart <= Exon_Starts[x+1]:
-					ExonIntron = "intron"
+				elif x +1 < len(Exon_Starts):
+					if self.ChrStart > Exon_Ends[x] and self.ChrStart <= Exon_Starts[x+1]:
+						ExonIntron = "intron"
+					elif (self.ChrStart >= Exon_Starts[x] and self.ChrStart <= Exon_Ends[x]) and (self.ChrEnd >= Exon_Starts[x+1] and self.ChrEnd <= Exon_Ends[x+1]):
+						ExonIntron = 'junction'
 			try:
 				ExonIntron
 			except:

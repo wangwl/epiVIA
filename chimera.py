@@ -9,6 +9,7 @@ import os
 import sys
 import re
 import pysam
+import time
 import argparse
 import logging
 from Bio.Seq import Seq
@@ -207,6 +208,8 @@ def FindChimericPair(unpaired_reads, chimera_fragments):
 		ltr_hits, ltr_strand, ltr_three_prime_pos= ClipInTarget(HostRead, args.LTRClipLen, ltr_seq)
 
 		# Retrieve the local sequence upper or downstream of Host Read aligned position.
+		local_seq_st = False
+		local_seq_ed = False
 		if InsertOri == "+" and VectorRead.cigar[0][0]==4 and VectorRead.cigar[0][1] >= args.LTRClipLen:
 			local_seq_st = HostRead.reference_end
 			local_seq_ed = local_seq_st + 200
@@ -215,27 +218,26 @@ def FindChimericPair(unpaired_reads, chimera_fragments):
 			local_seq_st = HostRead.reference_start - 200
 			local_seq_ed = local_seq_st + 200
 			host_local_ltr = "LTR3"
-		elif InsertOri == "-" and VectorRead.cigar[0][0]==4 and VectorRead.cigar[0][1] >= args.LTRClipLen:
+		elif InsertOri == "-" and VectorRead.cigar[0][0] == 4 and VectorRead.cigar[0][1] >= args.LTRClipLen:
 			local_seq_st = HostRead.reference_start - 200
 			local_seq_ed = local_seq_st + 200
 			host_local_ltr = "LTR5"
-		elif InsertOri == "-" and VectorRead.cigar[-1][0]==4 and VectorRead.cigar[-1][1] >= args.LTRClipLen:
+		elif InsertOri == "-" and VectorRead.cigar[-1][0] == 4 and VectorRead.cigar[-1][1] >= args.LTRClipLen:
 			local_seq_st = HostRead.reference_end
 			local_seq_ed = local_seq_st + 200
 			host_local_ltr = "LTR3"
 
-		try:
-			local_seq_st
-		except NameError:
-			local_seq_st = False
-			local_seq_ed = False
-
 		if local_seq_st and local_seq_ed:
 			twoBitToFa_P = Popen("twoBitToFa -seq={chr} -start={start} -end={end} {TwoBit} stdout".format(chr=Chrom, start=local_seq_st, end=local_seq_ed, TwoBit=args.Host2bit), shell=True, stdout=PIPE)
-			if twoBitToFa_P.poll() != 0:
-				raise Exception
-			host_local_seq = SeqIO.parse(twoBitToFa_P.stdout, 'fasta').next().seq
-			host_local_hits, host_local_strand, host_three_prime_pos= ClipInTarget(VectorRead, args.LTRClipLen, host_local_seq)
+			twoBitToFa_P.wait()
+			# if twoBitToFa_P.poll() != 0:
+			# 	raise Exception
+			try:
+				host_local_seq = SeqIO.parse(twoBitToFa_P.stdout, 'fasta').next().seq
+				host_local_hits, host_local_strand, host_three_prime_pos= ClipInTarget(VectorRead, args.LTRClipLen, host_local_seq)
+			except:
+				host_local_hits = []
+				host_local_strand = ""		
 		else:
 			host_local_hits = []
 			host_local_strand = ""
@@ -365,34 +367,45 @@ def ReAlignment(fafile, index, chimera_fragments, vector_reads):
 	return
 
 # @pysnooper.snoop("debug.log")
-def CorrectVectorAlignment(vector_reads, fa_fh, vector_fragments, clipcutoff):
+def CorrectLTR(read1, read2):
+	read1_alts = getAltanatives(read1.tags)
+	read2_alts = getAltanatives(read2.tags)
+	insert_size = abs(read1.template_length)
+
+	read1_vector_alts = []
+	read2_vector_alts = []
+	readname = read1.qname
+	for alt in read1_alts:
+		if alt[0] == vector_name:
+			read1_vector_alts.append(alt)
+	for alt in read2_alts:
+		if alt[0] == vector_name:
+			read2_vector_alts.append(alt)
+	## Here we only allow clipped alignment on one read, and full Alignment on the other. 2 bases bias allowed at the clipped site.
+	if len(read1_vector_alts) == 1 and len(read2_vector_alts) == 1 and insert_size > read1.qlen:
+		if read1.cigar[-1][0] == 4 and abs(read1.reference_end - ltr5_end) <= 2:
+			read1.reference_start = int(read1_vector_alts[0][1].lstrip("[-+]")) -1
+			read2.reference_start = int(read2_vector_alts[0][1].lstrip("[-+]")) -1
+		elif read2.cigar[-1][0] == 4 and abs(read2.reference_end - ltr5_end) <= 2:
+			read2.reference_start = int(read2_vector_alts[0][1].lstrip("[-+]")) -1
+			read1.reference_start = int(read1_vector_alts[0][1].lstrip("[-+]")) -1
+		elif read1.cigar[0][0] == 4 and abs(read1.reference_start - ltr3_start) <= 2:
+			read1.reference_start = ltr5_start
+			read2.reference_start = int(read2_vector_alts[0][1].lstrip("[-+]")) -1
+		elif read2.cigar[0][0] == 4 and abs(read2.reference_start - ltr3_start) <=2:
+			read2.reference_start = ltr5_start
+			read1.reference_start = int(read1_vector_alts[0][1].lstrip("[-+]")) -1
+		read1.next_reference_start = read2.reference_start
+		read2.next_reference_start = read1.reference_start
+
+def ProcessVectorAlignments(vector_reads, fa_fh, vector_fragments, clipcutoff):
 	for readname in vector_reads:
 		barcode = readname.split(":")[0]
 		read1, read2 = vector_reads[readname]
 		'''
 		Since there are two identical LTRs on each end of the sequence, reads that clipped at beginning of LTR3 and end of LTR5 can also be alternatively aligned to the other. If the read clipped aligned to the end of LTR3 or start of LTR5, and both reads can be alternatively aligned to the other LTR, then the altertive alignment will be chosen as primary.
 		'''
-		read1_alts = getAltanatives(read1.tags)
-		read2_alts = getAltanatives(read2.tags)
-		insert_size = abs(read1.template_length)
-
-		## Here we only allow clipped alignment on one read, and full Alignment on the other. 2 bases bias allowed at the clipped site.
-		if len(read1_alts) == 1 and len(read2_alts) == 1 and insert_size > read1.qlen and read1_alts[0][0] == vector_name and read2_alts[0][0] == vector_name:
-			if read1.cigar[-1][0] == 4 and read2.cigar[0][1] == read2.qlen and abs(read1.reference_end - ltr5_end) <= 2:
-				read1.reference_start = int(read1_alts[0][1].lstrip("[-+]")) +1
-				read2.reference_start = int(read2_alts[0][1].lstrip("[-+]")) +1
-			elif read2.cigar[-1][0] == 4 and read1.cigar[0][1] == read1.qlen and abs(read2.reference_end - ltr5_end) <= 2:
-				read2.reference_start = int(read2_alts[0][1].lstrip("[-+]")) +1
-				read1.reference_start = int(read1_alts[0][1].lstrip("[-+]")) +1
-			elif read1.cigar[0][0] == 4 and read2.cigar[0][1] == read2.qlen and abs(read1.reference_start - ltr3_start) <= 2:
-				read1.reference_start = ltr5_start
-				read2.reference_start = int(read2_alts[0][1].lstrip("[-+]")) +1
-			elif read2.cigar[0][0] == 4 and read1.cigar[0][1] == read1.qlen and abs(read2.reference_start - ltr3_start) <=2:
-				read2.reference_start = ltr5_start
-				read1.reference_start = int(read1_alts[0][1].lstrip("[-+]"))
-			read1.next_reference_start = read2.reference_start
-			read2.next_reference_start = read1.reference_start
-
+		CorrectLTR(read1, read2)
 		## Only clipped on one end of the read is allowed
 		read1_clip_frag = GetClipFrag(read1, clipcutoff)
 		read2_clip_frag = GetClipFrag(read2, clipcutoff)
@@ -430,18 +443,24 @@ def main():
 	vector_reads = defaultdict(list)
 	unpaired_reads = defaultdict(list)
 
+	t1 = time.time()
+	print >> sys.stderr, "Start Parsing Bam {}".format(t1)
 	ParseBam(args.bamfile, unpaired_reads, chimera_fragments, vector_reads)
+	print >> sys.stderr, "Finish Parsing Bam {}".format(time.time() - t1)
 	FindChimericPair(unpaired_reads, chimera_fragments)
+	print >> sys.stderr, "Finish ChimericPair {}".format(time.time() - t1)
 	fapath = os.path.join(args.tempdir, "Clipped_fragment.fa")
 	fa_fh = open(fapath, 'w')
-	CorrectVectorAlignment(vector_reads, fa_fh, vector_fragments, args.HostClipLen)
+	ProcessVectorAlignments(vector_reads, fa_fh, vector_fragments, args.HostClipLen)
 	fa_fh.close()
 	if os.path.getsize(fapath) != 0:
 		ReAlignment(fapath, args.HostIndex, chimera_fragments, vector_reads)
 	
+	print >> sys.stderr, "Finish VectorFragment {}".format(time.time() - t1)
 	cellstatfile = os.path.join(args.outdir, "Chimeric_cells.list")
 	integrationfile = os.path.join(args.outdir, "Integration_sites.list")
 	ChimeraSummary(chimera_fragments, integrationfile)
+	print >> sys.stderr, "Finish pipeline {}".format(time.time() - t1)
 	#VectorSummary(vector_fragments)
 	#report()
 
