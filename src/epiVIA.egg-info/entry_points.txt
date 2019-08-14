@@ -1,0 +1,3 @@
+[console_scripts]
+epiVIA = epiVIA.chimera:main
+

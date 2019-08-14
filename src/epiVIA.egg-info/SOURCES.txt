@@ -1,0 +1,14 @@
+README.md
+setup.py
+src/epiVIA/__init__.py
+src/epiVIA/chimera.py
+src/epiVIA/integration.py
+src/epiVIA/report.py
+src/epiVIA/ucsctracks.py
+src/epiVIA/utils.py
+src/epiVIA.egg-info/PKG-INFO
+src/epiVIA.egg-info/SOURCES.txt
+src/epiVIA.egg-info/dependency_links.txt
+src/epiVIA.egg-info/entry_points.txt
+src/epiVIA.egg-info/requires.txt
+src/epiVIA.egg-info/top_level.txt

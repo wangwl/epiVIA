@@ -17,11 +17,22 @@ FRAGMENT_LEN = 1000		## set the maximun fragment length
 VECTOR = 'pelps_cd19bbz' 	## Vector name
 MIN_READS = 3
 
+TSS_KEY = "geneHancerGenes"
+
+def get_abs_path(filename):
+	code_path = os.path.dirname(os.path.abspath(__file__))
+	if os.path.exists(filename):
+		return filename
+	elif os.path.exists(os.path.join(code_path, filename)):
+		return os.path.join(code_path, filename)
+	else:
+		print("{} not exists".format(filename))
+
 bb_conf = {
-"geneHancerGenesTssAll.hg38":"geneHancer/geneHancerGenesTssAll.hg38.bb",
-"geneHancerRegElementsDoubleElite.hg38":"geneHancer/geneHancerRegElementsDoubleElite.hg38.bb",
+"geneHancerGenes":"geneHancer/geneHancerGenesTssAll.hg38.bb",
+"geneHancerRegElementsDoubleElite":"geneHancer/geneHancerRegElementsDoubleElite.hg38.bb",
 "geneHancerInteractionsAll.v2.hg38":"geneHancer/geneHancerInteractionsAll.v2.hg38.bb",
-"geneHancerRegElementsAll.hg38":"geneHancer/geneHancerRegElementsAll.hg38.bb",
+"geneHancerRegElements":"geneHancer/geneHancerRegElementsAll.hg38.bb",
 "geneHancerInteractionsDoubleElite.hg38":"geneHancer/geneHancerInteractionsDoubleElite.hg38.bb",
 "geneHancerGenesTssDoubleElite.hg38":"geneHancer/geneHancerGenesTssDoubleElite.hg38.bb",
 "geneHancerInteractionsDoubleElite.v2.hg38":"geneHancer/geneHancerInteractionsDoubleElite.v2.hg38.bb",

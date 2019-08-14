@@ -1,0 +1,1 @@
+epiVIA --Vector data/p746.fa --ltr5_start 17 --ltr5_end 693 --ltr3_start 9149  --ltr3_end  9825 --HostIndex /mnt/data0/wenliang/project/01.epiVIA/00.reference/GRCh38 --Host2bit /mnt/data0/wenliang/database/hg38/hg38.2bit --tempdir . --chimera_bam chimera.bam --gbdb /mnt/data0/wenliang/database/ data/candidate.bam .

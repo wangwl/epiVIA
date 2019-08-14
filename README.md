@@ -1,4 +1,10 @@
-# epiVIA
-Vector Integration site Analysis with epigenomic assays.
+## epiVIA
+Vector Integration Analysis with epigenomic assays.
 
-Tips to Collaborators, the main function is presently in chimera.py
+### Install
+
+### Usage
+
+### Output
+
+### example

@@ -8,14 +8,13 @@
 import os
 import sys
 import re
-import pysnooper
 import json
 import yaml
 import argparse
 import requests
 from subprocess import Popen, PIPE
 
-from utils import bb_conf
+from epiVIA.utils import bb_conf, get_abs_path
 
 UCSC_API = "https://api.genome.ucsc.edu/"
 
@@ -26,41 +25,56 @@ class UCSCTrack(object):
 
 
 # @pysnooper.snoop()
-def run_bigBedToBed(genome, chrom, start, end, track, columns=None, gbdb="http://hgdownload.soe.ucsc.edu/gbdb/"):
+def run_bigBedToBed(track, genome, chrom=None, start=None, end=None, columns=None, gbdb="http://hgdownload.soe.ucsc.edu/gbdb/"):
 	try:
 		file_path = "{gbdb}/{genome}/{bb_path}".format(gbdb=gbdb, genome=genome, bb_path=bb_conf[track])
-	except:
-		print "Provide {} bigBed file path".format(track)
-	
-	cmd = "bigBedToBed -chrom={chrom} -start={start} -end={end} {path} stdout".format(chrom=chrom, start=start, end=end, path=file_path)
-	child = Popen(cmd, shell=True, stdout=PIPE)
-	child.wait()
+		cmd = "{bigBedToBed_path} {bb_path} stdout".format(bigBedToBed_path=get_abs_path('bigBedToBed'), bb_path=file_path)
+		if chrom:
+			cmd += " -chrom={chrom}".format(chrom=chrom)
+		if start:
+			cmd += " -start={start}".format(start=start)
+		if end:
+			cmd += " -end={end}".format(end=end)
 
-	if child.poll() != 0:
-		raise Exception
-	output = []
-	for line in child.stdout.readlines():
-		row = line.rstrip().split("\t")
-		record = []
-		if len(columns) > 0:
-			for x in columns:
-				record.append(row[x])
-		else:
-			record = rows
-		output.append(record)
-	return output
+		child = Popen(cmd, shell=True, stdout=PIPE, universal_newlines=True)
+		child.wait()
+		# if child.poll() != 0:
+		# 	raise Exception
+		output = []
+		for line in child.stdout.readlines():
+			row = str(line).rstrip().split("\t")
+			record = []
+			if len(columns) > 0:
+				for x in columns:
+					record.append(row[x])
+			else:
+				record = row
+			output.append(record)
+		return output
+	except:
+		print("fail to annotate {}, continue anyway.".format(track))
+		return []
+	## bigBedToBed subprocess command line
+	
+	
 
 #@pysnooper.snoop()
-def find_ucsctrack(genome, chrom, start, end, track, keys=None):
+def find_ucsctrack(track, genome, chrom=None, start=None, end=None, keys=[]):
 	action = "getData"
 	datatype = "track"
 	track_name = track
 
-	url = UCSC_API + "{action}/{datatype}?genome={genome};track={track};chrom={chrom};start={start};end={end}".format(action = action, datatype=datatype, genome=genome, chrom=chrom, start=start, end=end, track=track_name)
+	url = UCSC_API + "{action}/{datatype}?genome={genome};track={track}".format(action = action, datatype=datatype, genome=genome, track=track_name)
+	if chrom:
+		url += ";chrom={chrom}".format(chrom=chrom)
+	if start:
+		url += ";start={start}".format(start=start)
+	if end:
+		url += ";end={end}".format(end=end)
 	request = requests.get(url)
 
-	if request.status_code != 200:
-		print url
+	# if request.status_code != 200:
+	# 	print url
 	if request.status_code == 200 and request.headers['Content-Type'] == 'application/json':
 		content = yaml.safe_load(request.text)
 		items = content[track_name]
@@ -70,14 +84,13 @@ def find_ucsctrack(genome, chrom, start, end, track, keys=None):
 			if len(keys) > 0:
 				for key in keys:
 					line.append(record[key])
+				output.append(line)
 			else:
-				for key in sorted(record.keys()):
-					line.append(record[key])
-			output.append(line)
+				output.append(record)
 		return output
 	else:
-		items = run_bigBedToBed(genome, chrom, start, end, track, keys)
-		return items
+		print("fail to annotate {} with UCSC API, continue anyway.".format(track))
+		return []
 
 def find_trackhub():
 	pass
@@ -109,11 +122,11 @@ def main():
 	parser.add_argument("--gbdb", default="http://hgdownload.soe.ucsc.edu/gbdb/")
 	args = parser.parse_args()
 	if args.track_keys:
-		items = find_ucsctrack(args.genome, args.chrom, args.start, args.end, args.track, args.track_keys)
+		items = find_ucsctrack(args.track, args.genome, args.chrom, args.start, args.end,  args.track_keys)
 	else:
-		items = find_ucsctrack(args.genome, args.chrom, args.start, args.end, args.track, args.bedcolumns)
+		items = find_ucsctrack(args.track, args.genome, args.chrom, args.start, args.end, args.bedcolumns)
 	for x in items:
-		print "\t".join(x)
+		print("\t".join(x))
 
 if __name__ == '__main__':
 	main()
