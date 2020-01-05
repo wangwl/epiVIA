@@ -42,35 +42,50 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --Provirus PROVIRUS   Fasta file of provirus sequence that is integrated in
-                        the host genome
+  
+  --Provirus PROVIRUS   Fasta file of provirus sequence that is integrated in the host genome
+                        
   --Vector VECTOR       Fasta file of vector sequence
+  
   --ltr5_start LTR5_START
                         Start position of LTR5, required if using vector
+                        
   --ltr5_end LTR5_END   End position of LTR5
+  
   --ltr3_start LTR3_START
                         Start position of LTR3, required if using vector
+                        
   --ltr3_end LTR3_END   End position of LTR3, required if using vector
+  
   --HostIndex HOSTINDEX
                         The BWA Index prefix of Host genome
+                        
   --LTRClipLen LTRCLIPLEN
                         The soft clipped read length to search in LTR
+                        
   --HostClipLen HOSTCLIPLEN
                         The soft clipped length to search in host genome
+                        
   --Host2bit HOST2BIT   The 2bit (UCSC) file of host genome sequence
+  
   --tempdir TEMPDIR     A directory for temporary files generated in the
                         pipeline
+                        
   --quality QUALITY     Set the MAPQ for the host read that locate the
                         integration site
+                        
   --candidate_bam CANDIDATE_BAM
                         A bamfile to write the suspicious reads used for
                         identifying chimeras, saving time if rerun the
                         pipeline
+                        
   --chimera_bam CHIMERA_BAM
                         A bamfile to write the records that are classified as
                         chimeras
+                        
   --gbdb GBDB           gbdb directory of UCSC, default:
                         http://hgdownload.soe.ucsc.edu/gbdb/.
+                        
   --genome GENOME       Genome name in UCSC, used for annotation of the
                         integration sites
 
