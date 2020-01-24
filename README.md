@@ -13,80 +13,66 @@ Although there is pair rescue during the alignment of BWA, we still found some p
 ## Install
 
 ### install with pip
-pip install epiVIA
+> pip install epiVIA
 
 ### intall from github page
-git clone https://github.com/wangwl/epiVIA
+> git clone https://github.com/wangwl/epiVIA
 
-cd epiVIA
+> cd epiVIA
 
 python setup.py install
 
 ## Usage
-usage: epiVIA [-h] [--Provirus PROVIRUS] [--Vector VECTOR]
-              [--ltr5_start LTR5_START] --ltr5_end LTR5_END
-              [--ltr3_start LTR3_START] [--ltr3_end LTR3_END] --HostIndex
-              HOSTINDEX [--LTRClipLen LTRCLIPLEN] [--HostClipLen HOSTCLIPLEN]
-              --Host2bit HOST2BIT [--tempdir TEMPDIR] [--quality QUALITY]
-              [--candidate_bam CANDIDATE_BAM] [--chimera_bam CHIMERA_BAM]
-              [--gbdb GBDB] [--genome GENOME]
-              bamfile outdir
+> usage: epiVIA [-h] [--Provirus PROVIRUS] [--Vector VECTOR] [--ltr5_start LTR5_START] --ltr5_end LTR5_END  [--ltr3_start LTR3_START] [--ltr3_end LTR3_END] --HostIndex  HOSTINDEX [--LTRClipLen LTRCLIPLEN] [--HostClipLen HOSTCLIPLEN]  --Host2bit HOST2BIT [--tempdir TEMPDIR] [--quality QUALITY]  [--candidate_bam CANDIDATE_BAM] [--chimera_bam CHIMERA_BAM] [--gbdb GBDB] [--genome GENOME]  bamfile  outdir
 
-Find chimera in alignment result with combined host and vector sequence as
+> Find chimera in alignment result with combined host and vector sequence as
 reference.
 
-positional arguments:
-  bamfile
-  outdir                A directory where the result files (stat on cells and
+> positional arguments:
+>   bamfile             Alignment result of the ATAC-seq data
+>   outdir                A directory where the result files (stat on cells and
                         integrations) written
 
-optional arguments:
-  -h, --help            show this help message and exit
+> optional arguments:
+>  -h, --help            show this help message and exit
   
-  --Provirus PROVIRUS   Fasta file of provirus sequence that is integrated in the host genome
+>  --Provirus PROVIRUS   Fasta file of provirus sequence that is integrated in the host genome
                         
-  --Vector VECTOR       Fasta file of vector sequence
+>  --Vector VECTOR       Fasta file of vector sequence
   
-  --ltr5_start LTR5_START
-                        Start position of LTR5, required if using vector
+>  --ltr5_start LTR5_START                Start position of LTR5, required if using vector
                         
-  --ltr5_end LTR5_END   End position of LTR5
+>  --ltr5_end LTR5_END   End position of LTR5
   
-  --ltr3_start LTR3_START
-                        Start position of LTR3, required if using vector
+>  --ltr3_start LTR3_START   Start position of LTR3, required if using vector
                         
-  --ltr3_end LTR3_END   End position of LTR3, required if using vector
+>  --ltr3_end LTR3_END   End position of LTR3, required if using vector
   
-  --HostIndex HOSTINDEX
-                        The BWA Index prefix of Host genome
+>  --HostIndex HOSTINDEX   The BWA Index prefix of Host genome
                         
-  --LTRClipLen LTRCLIPLEN
-                        The soft clipped read length to search in LTR
+>  --LTRClipLen LTRCLIPLEN        The soft clipped read length to search in LTR
                         
-  --HostClipLen HOSTCLIPLEN
-                        The soft clipped length to search in host genome
+>  --HostClipLen HOSTCLIPLEN      The soft clipped length to search in host genome
                         
-  --Host2bit HOST2BIT   The 2bit (UCSC) file of host genome sequence
+>  --Host2bit HOST2BIT   The 2bit (UCSC) file of host genome sequence
   
-  --tempdir TEMPDIR     A directory for temporary files generated in the
-                        pipeline
+>  --tempdir TEMPDIR     A directory for temporary files generated in the pipeline
                         
-  --quality QUALITY     Set the MAPQ for the host read that locate the
-                        integration site
+>  --quality QUALITY     Set the MAPQ for the host read that locate the integration site
                         
-  --candidate_bam CANDIDATE_BAM
+>  --candidate_bam CANDIDATE_BAM
                         A bamfile to write the suspicious reads used for
                         identifying chimeras, saving time if rerun the
                         pipeline
                         
-  --chimera_bam CHIMERA_BAM
+>  --chimera_bam CHIMERA_BAM
                         A bamfile to write the records that are classified as
                         chimeras
                         
-  --gbdb GBDB           gbdb directory of UCSC, default:
+>  --gbdb GBDB           gbdb directory of UCSC, default:
                         http://hgdownload.soe.ucsc.edu/gbdb/.
                         
-  --genome GENOME       Genome name in UCSC, used for annotation of the
+>  --genome GENOME       Genome name in UCSC, used for annotation of the
                         integration sites
 
 ## Output
