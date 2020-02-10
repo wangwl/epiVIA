@@ -1,7 +1,7 @@
 ## Description of epiVIA
 Vector Integration Analysis with epigenomic assays.
 
-![epiVIA pipeline](images/pipeline.png)
+![epiVIA pipeline](images/Figure1.jpg)
 
 ### (1) Identify Chimeric reads from bam file
 
