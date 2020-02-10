@@ -8,7 +8,6 @@
 import os
 import pandas
 from collections import Counter, defaultdict
-from subprocess import check_output
 
 from epiVIA.integration import Integration
 
@@ -28,19 +27,6 @@ def process_integration_site(grouped_integration, gbdb):
 	grouped_integration.annotate_Enhancer(gbdb)
 	# grouped_integration.nearest_gene()
 	return grouped_integration
-
-def integration_coverage(integration, fragments_tsv_path, extend, singlecells):
-	pass
-	cmd = 'tabix {fragments_tsv} {chr}:{st}-{ed}'.format(fragments_tsv=fragments_tsv_path, chr=integration.Chrom,
-	                                                     st=integration.ChrStart - extend, ed=integration.ChrStart + extend)
-	cmd_out = check_output(cmd, shell=True, universal_newlines=True)
-	frags_in_cell = defaultdict(list)
-	cells_df = pandas.read_csv(singlecells, index_col = 0)
-	cells_qc_dict = cells_df.to_dict('index')
-	for line in cmd_out.rstrip().split("\n"):
-		frag_integration = line.rstrip().split("\t")
-		if frag_integration[3] in cells_qc_dict and cells_qc_dict[frag_integration[3]]['is__cell_barcode']:
-			frags_in_cell[frag_integration[3]].append(line)
 
 def ChimeraSummary(chimera_fragments, outdir, gbdb, quality):
 	cellCounter = defaultdict(Counter)
