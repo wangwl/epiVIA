@@ -24,7 +24,7 @@ Although there is pair rescue during the alignment of BWA, we still found some p
 
 
 ## Output
-This pipeline has multiple output files for the downstream analysis of integration sites, cells with integration sites and with
+This pipeline has multiple output files for the downstream analysis of integration sites, cells with integration sites and with proviral reads. The following tables are detailed descriptions of the output files and their file formats.
 
 ### Result files
 | filename                 | description                                                          |
@@ -34,7 +34,63 @@ This pipeline has multiple output files for the downstream analysis of integrati
 | Cell_summary.txt         | Number of chimeric and viral reads in each cell                      |
 | Vector_coverage.csv      | Coverage of viral reads at each positioin along the proviral genome  |
 
-#### File format
+#### Integration_sites.list
+
+| Column name  |  Description                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| Genome       | Reference genome version (eg: hg19, hg38, mm9, mm10)                                            |
+| Chrom        | Chromosome of the integration site                                                              |
+| ChrStart     | Start position in host genome where the chimeric reads aligned, or the integration site         |
+| ChrEnd       | End Position in host genome where the chimeric reads aligned, or the integration site           |
+| VectorStart  | Start posision in proviral genome where the chimeric reads aligned                              |
+| VectorEnd    | End position in proviral genome where the chimeric reads aligned                                |
+| LTR          | The chimeric reads is from 5' LTR or 3' LTR                                                     |
+| InsertOri    | Integration orietation of the proviral genome based on the reference sequence                   |
+| InsertGene   | The annotated gene at the integration site of the host genome                                   |
+| GeneOri      | Orientation of the gene                                                                         |
+| ExonIntron   | The integration is in intron or exon region of the gene                                         |
+| Enhancer     | Enhancer or Promoter information at the integration site                                        |
+| Elite        | If the integration site locates in an enhancer based on UCSC annotation, whether it's Elite     |
+| TEFamily     | Family of transposable elements annotation at the integration site                              |
+| TEClass      | Class of transposable elements annotation at the integration site                               |
+| CellNumber   | Number of cells have this integration site                                                      |
+| CellBarcodes | Cell barcodes that have this integration site                                                   |
+| ReadInCell   | Number of reads in each cell that support this integration site                                 |
+| ReadNumber   | Total number of reads that support this integration site                                        |
+| Quality      | The quality of the integration site, adapted from the mapping quality of BWA                    |
+
+#### barcode_integration.list
+Each cell that have integration sites. If a cell have multiple integration sites, ".1", ".2", ".3", ..., were appended to the cell barcode.
+
+| Column name  |  Description                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| CellBarcode  | Cell Barcode of the cell                                                                        |
+| Chrom        | Chromosome of the integration site                                                              |
+| ChrStart     | Start position in host genome where the chimeric reads aligned, or the integration site         |
+| ChrEnd       | End Position in host genome where the chimeric reads aligned, or the integration site           |
+| VectorStart  | Start posision in proviral genome where the chimeric reads aligned                              |
+| VectorEnd    | End position in proviral genome where the chimeric reads aligned                                |
+| InsertGene   | The annotated gene at the integration site of the host genome                                   |
+| ExonIntron   | The integration is in intron or exon region of the gene                                         |
+| Enhancer     | Enhancer or Promoter information at the integration site                                        |
+| TEFamily     | Family of transposable elements annotation at the integration site                              |
+| TEClass      | Class of transposable elements annotation at the integration site                               |
+| Quality      | The quality of the integration site, adapted from the mapping quality of BWA                    |
+
+#### Cell_summary.txt
+
+| Column name  |  Description                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| CellBarcode  | Cell Barcode of the cell                                                                        |
+| ChimeraSum   | Total number of chimeric reads from the cell                                                    |
+| Pair         | Number of 'Pair' chimeric reads (case a) from the cell                                          |
+| HostRead     | Number of 'HostRead' chimeric reads (case b) from the cell                                      |
+| VectorRead   | Number of 'VectorRead' chimeric reads (case c) from the cell                                    |
+| integration  | Number of integration sites in the cell                                                         |
+| VectorSum    | Total number of reads from the integrated proviral genome                                       |
+| noLTR        | Number of proviral reads that is not from LTR regions                                           |
+| LTR          | Number of proviral reads that is from LTR regions                                               |
+
 
 
 ### Temporary files
