@@ -1,6 +1,11 @@
 ## Description of epiVIA
 Vector Integration Analysis with epigenomic assays.
 
+<<<<<<< HEAD
+=======
+![pipeline](images/Figure1.jpg)
+
+>>>>>>> origin/master
 ### (1) Identify Chimeric reads from bam file
 
 EpiVIA parses each read and identifies the chimeric fragments, which are further classified into three different categories based on how the read pair is aligned to the combined reference genome: (1) “pair-chimeric” are the fragments with one read mapped to the host genome and the other mapped to the provirus (or vector) genome; (2) “host-chimeric” are the fragments that both ends mapped to the host genome, with a small soft-clipped fragment at one end which can exactly match the start or end of LTR sequence of provirus; (3) “viral-chimeric” are the fragments that are properly pair mapped to either end of the provirus genome, with a soft-clipped fragment at the end which can be mapped to the host genome with a non-zero mapping quality. Since the real chimeric fragment won’t be soft-clipped at 3’ end of 5’ LTR and 5’ end of 3’ LTR, while these cases can present in the alignment results, we corrected the aligned position for these fragments. 
@@ -104,4 +109,8 @@ epiVIA has options of "--candidate_bam" and "--chimera" for writing the bam reco
 
 ## Example
 
+<<<<<<< HEAD
 > epiVIA --Vector data/p746.fa --ltr5_start 17 --ltr5_end 693 --ltr3_start 9149  --ltr3_end  9825 --HostIndex GRCh38 --Host2bit hg38.2bit --tempdir . --chimera_bam chimera.bam --gbdb http://hgdownload.soe.ucsc.edu/gbdb/ test/data/candidate.bam .
+=======
+> epiVIA --Vector data/p746.fa --ltr5_start 17 --ltr5_end 693 --ltr3_start 9149  --ltr3_end  9825 --HostIndex GRCh38 --Host2bit hg38.2bit --tempdir . --chimera_bam chimera.bam --gbdb http://hgdownload.soe.ucsc.edu/gbdb/ test/data/candidate.bam .
+>>>>>>> origin/master
