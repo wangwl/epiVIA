@@ -24,7 +24,7 @@ class Statistics(object):
 def process_integration_site(grouped_integration, gbdb):
 	grouped_integration.annotate_TE()
 	grouped_integration.annotate_Gene(gbdb)
-	grouped_integration.annotate_Enhancer(gbdb)
+	# grouped_integration.annotate_Enhancer(gbdb)
 	# grouped_integration.nearest_gene()
 	return grouped_integration
 

@@ -26,7 +26,8 @@ def get_abs_path(filename):
 	elif os.path.exists(os.path.join(code_path, filename)):
 		return os.path.join(code_path, filename)
 	else:
-		print("{} not exists".format(filename))
+		return filename
+		# print("{} not exists".format(filename))
 
 bb_conf = {
 "geneHancerGenes":"geneHancer/geneHancerGenesTssAll.hg38.bb",

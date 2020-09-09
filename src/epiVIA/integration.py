@@ -225,11 +225,11 @@ class Integration(object):
         except:
             print("Gene not annoated", file=sys.stderr)
 
-        try:
-            print_string += "\t" + self.Enhancer + "\t" + self.Elite
-            header += "\tEnhancer\tElite"
-        except:
-            print("Enhancer not annoated", file=sys.stderr)
+        # try:
+        #     print_string += "\t" + self.Enhancer + "\t" + self.Elite
+        #     header += "\tEnhancer\tElite"
+        # except:
+        #     print("Enhancer not annoated", file=sys.stderr)
 
         try:
             print_string += "\t" + self.TEFamily + "\t" + self.TEClass
@@ -237,19 +237,19 @@ class Integration(object):
         except:
             print("TE not annoated", file=sys.stderr)
 
-        try:
-            print_string += "\t" + self.UpstreamGene + "\t" + \
-                self.UpstreamGeneOri + "\t" + self.UpstreamGeneDist
-            header += "\tUpstreamGene\tUpstreamGeneOri\tUpstreamGeneDist"
-        except:
-            print("UpstreamGene not annoated", file=sys.stderr)
+        # try:
+        #     print_string += "\t" + self.UpstreamGene + "\t" + \
+        #         self.UpstreamGeneOri + "\t" + self.UpstreamGeneDist
+        #     header += "\tUpstreamGene\tUpstreamGeneOri\tUpstreamGeneDist"
+        # except:
+        #     print("UpstreamGene not annoated", file=sys.stderr)
 
-        try:
-            print_string += "\t" + self.DownstreamGene + "\t" + \
-                self.DownstreamGeneOri + "\t" + self.DownstreamGeneDist
-            header += "\tDownstreamGene\tDownstreamGeneOri\tDownstreamGeneDist"
-        except:
-            print("DownstreamGene not annoated", file=sys.stderr)
+        # try:
+        #     print_string += "\t" + self.DownstreamGene + "\t" + \
+        #         self.DownstreamGeneOri + "\t" + self.DownstreamGeneDist
+        #     header += "\tDownstreamGene\tDownstreamGeneOri\tDownstreamGeneDist"
+        # except:
+        #     print("DownstreamGene not annoated", file=sys.stderr)
 
         try:
             print_string += "\t" + str(self.CellNumber) + "\t" + ",".join(self.CellBarcodes) + \
