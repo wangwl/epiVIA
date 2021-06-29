@@ -1,0 +1,3 @@
+CellBarcode	Chrom	ChrStart	ChrEnd	VectorStart	VectorEnd	InsertGene	ExonIntron	Enhancer	TEFamily	TEClass	Quality
+None	chr1	52461563	52461775	9261	9298	TUT4	intron		None	None	60
+None.1	chr3	9141245	9141390	11461	11497	SRGAP3	intron		None	None	60

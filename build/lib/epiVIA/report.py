@@ -187,7 +187,7 @@ def VectorSummary(vector_fragments, vector_coverage, outdir):
 		barcode = Vectorfrag.barcode
 		if Vectorfrag.is_host_alts():
 			continue
-		mark_dup_key = (barcode, Vectorfrag.reference_start, Vectorfrag.reference_end)
+		mark_dup_key = (Vectorfrag.reference_start, Vectorfrag.reference_end)
 		if mark_dup_key in mark_dup:
 			continue
 		else:

@@ -20,6 +20,10 @@ Description: ## Description of epiVIA
         
         ## Install
         
+        ### dependencies
+        
+        Make sure UCSC "bigBedToBed" tool is in your PATH
+        
         ### install with pip
         > pip install epiVIA
         

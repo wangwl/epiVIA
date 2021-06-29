@@ -1,0 +1,17 @@
+Genome	Chrom	ChrStart	ChrEnd	VectorStart	VectorEnd	LTR	InsertOri	InsertGene	GeneOri	ExonIntron	TEFamily	TEClass	CellNumber	CellBarcodes	ReadInCell	ReadNumber	ChimeraSource	Quality
+hg38	chr1	52461300	52461337	9261	9298	None	+	TUT4	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr1	52461456	52461490	9731	9763	None	+	TUT4	-	intron	None	None	1	None	1	1	Pair	54
+hg38	chr1	52461457	52461494	502	539	None	+	TUT4	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr1	52461471	52461508	9610	9646	None	+	TUT4	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr1	52461494	52461531	9584	9620	None	+	TUT4	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr1	52461552	52461589	9120	9157	None	+	TUT4	-	exon	None	None	1	None	1	1	Pair	60
+hg38	chr1	52461556	52461593	657	687	None	+	TUT4	-	exon	None	None	1	None	1	1	Pair	60
+hg38	chr1	52461563	52461600	555	591	None	+	TUT4	-	exon	None	None	1	None	1	1	Pair	60
+hg38	chr1	52461775	52461812	609	646	None	+	TUT4	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr3	9140871	9140908	11461	11497	None	+	SRGAP3	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr3	9140925	9140962	11150	11186	None	+	SRGAP3	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr3	9141048	9141085	11359	11396	None	+	SRGAP3	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr3	9141125	9141162	11414	11451	None	+	SRGAP3	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr3	9141145	9141182	11418	11454	None	+	SRGAP3	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr3	9141245	9141282	11500	11536	None	+	SRGAP3	-	intron	None	None	1	None	1	1	Pair	60
+hg38	chr3	9141390	9141426	11338	11375	None	+	SRGAP3	-	intron	None	None	1	None	1	1	Pair	60
